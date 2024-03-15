@@ -5,13 +5,19 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from pathlib import Path
 import base64
+import json
 
 
-client = Anthropic()
+with open("config.json") as config_file:
+    config = json.load(config_file)
+    api_key = config["api_key"]
 
-with open(Path(__file__).parent.joinpath("logo.png"), "rb") as image_file:
-    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-
+client = Anthropic(api_key)
+image_path = "/Users/micahbragg/Desktop/cs shit/spark-2024/Helloworld.png"
+with Image.open(image_path) as image: 
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    encoded_string = base64.b64encode(buffered.getvalue()).decode()
 response = client.messages.create(
     max_tokens=1024,
     messages=[
@@ -35,5 +41,11 @@ response = client.messages.create(
     ],
     model="claude-3-opus-2024-0229",
 )
-
-print(response.model_dump_json(indent=2))
+extracted_text = response.model_dump_json(["messages"][0]["content"][0]["text"])
+pdf_path = "/Users/micahbragg/Desktop/cs shit/spark-2024/TestPDF"
+c = canvas.Canvas(pdf_path, pagesize=letter)
+c.drawString(100,750,extracted_text)
+c.showPage()
+c.save()
+print(f"Extracted text has been written {pdf_path}")
+##print(response.model_dump_json(indent=2))
